@@ -27,7 +27,7 @@
 
 <header>
     <h1 style="margin:0; font-size: 1.6rem;">『伊那路』目次アーカイブ</h1>
-    <p style="margin:8px 0 0; font-size: 0.9rem; opacity: 0.9;">収録範囲：2008年（通巻612号）〜2025年（通巻827号）</p>
+    <p style="margin:8px 0 0; font-size: 0.9rem; opacity: 0.9;">収録範囲：2008年（通巻612号）〜2025年</p>
 </header>
 
 <div class="container">
@@ -35,7 +35,7 @@
     
     <div class="stats-row">
         <div id="count" class="stats">読み込み中...</div>
-        <a href="data.csv" download="inaji_index.csv" class="download-btn">データをCSVで保存</a>
+        <button onclick="downloadFilteredCSV()" class="download-btn">表示中の結果をCSVで保存</button>
     </div>
 
     <div id="results"></div>
@@ -43,6 +43,7 @@
 
 <script>
 let database = [];
+let currentResults = []; // 現在画面に表示されているデータを保持
 
 // CSV読み込み
 Papa.parse("data.csv", {
@@ -51,6 +52,7 @@ Papa.parse("data.csv", {
     skipEmptyLines: true,
     complete: function(results) {
         database = results.data.filter(row => row.title);
+        currentResults = database; // 初期状態は全データ
         displayResults(database);
         document.getElementById('count').innerText = `${database.length} 件の記事を公開中`;
     }
@@ -59,14 +61,14 @@ Papa.parse("data.csv", {
 // 検索実行（スペース無視・小文字対応）
 document.getElementById('search-box').addEventListener('input', function(e) {
     const query = e.target.value.toLowerCase().replace(/\s+/g, "");
-    const filtered = database.filter(row => {
+    currentResults = database.filter(row => {
         const t = (row.title || "").toLowerCase().replace(/\s+/g, "");
         const a = (row.author || "").toLowerCase().replace(/\s+/g, "");
         const n = (row.note || "").toLowerCase().replace(/\s+/g, "");
         return t.includes(query) || a.includes(query) || n.includes(query);
     });
-    displayResults(filtered);
-    document.getElementById('count').innerText = `${filtered.length} 件ヒットしました`;
+    displayResults(currentResults);
+    document.getElementById('count').innerText = `${currentResults.length} 件ヒットしました`;
 });
 
 function displayResults(data) {
@@ -87,6 +89,31 @@ function displayResults(data) {
         `;
         container.appendChild(card);
     });
+}
+
+// 検索結果だけをCSVとして書き出す関数
+function downloadFilteredCSV() {
+    if (currentResults.length === 0) {
+        alert("保存するデータがありません。");
+        return;
+    }
+
+    // JSON形式からCSV文字列に変換
+    const csv = Papa.unparse(currentResults);
+
+    // 文字化け対策（BOM付きUTF-8）
+    const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+    const blob = new Blob([bom, csv], { type: 'text/csv;charset=utf-8;' });
+    
+    // ダウンロード用リンクを一時的に作成
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", "inaji_search_results.csv");
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
 </script>
 
