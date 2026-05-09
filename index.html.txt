@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>伊那路目次アーカイブ | 信州郷土誌プロジェクト</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <style>
+        :root { --main-clr: #2c3e50; --bg-clr: #f8f9fa; }
+        body { font-family: -apple-system, "Helvetica Neue", "Hiragino Kaku Gothic ProN", sans-serif; background: var(--bg-clr); margin: 0; color: var(--main-clr); }
+        header { background: var(--main-clr); color: white; padding: 20px 15px; text-align: center; }
+        .container { max-width: 800px; margin: 0 auto; padding: 15px; }
+        #search-box { width: 100%; padding: 15px; font-size: 18px; border: 2px solid #ddd; border-radius: 8px; box-sizing: border-box; margin-bottom: 10px; sticky: top; }
+        .stats { font-size: 14px; margin-bottom: 15px; color: #666; }
+        .card { background: white; padding: 15px; margin-bottom: 12px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .mag-tag { display: inline-block; background: #e67e22; color: white; font-size: 11px; padding: 2px 6px; border-radius: 4px; margin-bottom: 5px; }
+        .title { font-weight: bold; font-size: 17px; line-height: 1.4; display: block; margin-bottom: 5px; }
+        .author { color: #34495e; font-size: 15px; margin-bottom: 8px; }
+        .meta { font-size: 13px; color: #7f8c8d; border-top: 1px solid #eee; padding-top: 8px; }
+        .note { font-style: italic; color: #95a5a6; font-size: 12px; margin-top: 5px; }
+        .highlight { background: #ffeb3b; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1 style="margin:0; font-size: 1.4rem;">伊那路目次アーカイブ</h1>
+    <p style="margin:5px 0 0; font-size: 0.8rem; opacity: 0.8;">信州郷土誌アーカイブ・フェーズ1</p>
+</header>
+
+<div class="container">
+    <input type="text" id="search-box" placeholder="記事名、著者、特集名で検索...">
+    <div id="count" class="stats">読み込み中...</div>
+    <div id="results"></div>
+</div>
+
+<script>
+let database = [];
+
+// CSV読み込み
+Papa.parse("data.csv", {
+    download: true,
+    header: true,
+    complete: function(results) {
+        database = results.data.filter(row => row.title);
+        displayResults(database);
+        document.getElementById('count').innerText = `${database.length} 件のデータが見つかりました`;
+    }
+});
+
+// 検索実行
+document.getElementById('search-box').addEventListener('input', function(e) {
+    const query = e.target.value.toLowerCase();
+    const filtered = database.filter(row => {
+        return row.title.toLowerCase().includes(query) || 
+               row.author.toLowerCase().includes(query) || 
+               row.note.toLowerCase().includes(query);
+    });
+    displayResults(filtered);
+    document.getElementById('count').innerText = `${filtered.length} 件ヒットしました`;
+});
+
+function displayResults(data) {
+    const container = document.getElementById('results');
+    container.innerHTML = '';
+    
+    data.forEach(row => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+            <span class="mag-tag">${row.magazine}</span>
+            <span class="title">${row.title}</span>
+            <div class="author">${row.author || '不明'}</div>
+            <div class="meta">
+                ${row.date.split('/')[0]}年 / ${row.volume}巻 ${row.issue}号 (通巻${row.serial_num}号) / ${row.page}ページ
+            </div>
+            ${row.note ? `<div class="note">備考: ${row.note}</div>` : ''}
+        `;
+        container.appendChild(card);
+    });
+}
+</script>
+
+</body>
+</html>
