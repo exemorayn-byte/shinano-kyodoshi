@@ -3,34 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>伊那路目次アーカイブ | 信州郷土誌プロジェクト</title>
+    <title>『伊那路』目次アーカイブ | 信州郷土誌プロジェクト</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <style>
-        :root { --main-clr: #2c3e50; --bg-clr: #f8f9fa; }
+        :root { --main-clr: #2c3e50; --bg-clr: #f8f9fa; --accent-clr: #27ae60; }
         body { font-family: -apple-system, "Helvetica Neue", "Hiragino Kaku Gothic ProN", sans-serif; background: var(--bg-clr); margin: 0; color: var(--main-clr); }
-        header { background: var(--main-clr); color: white; padding: 20px 15px; text-align: center; }
+        header { background: var(--main-clr); color: white; padding: 25px 15px; text-align: center; }
         .container { max-width: 800px; margin: 0 auto; padding: 15px; }
-        #search-box { width: 100%; padding: 15px; font-size: 18px; border: 2px solid #ddd; border-radius: 8px; box-sizing: border-box; margin-bottom: 10px; sticky: top; }
-        .stats { font-size: 14px; margin-bottom: 15px; color: #666; }
+        #search-box { width: 100%; padding: 15px; font-size: 18px; border: 2px solid #ddd; border-radius: 8px; box-sizing: border-box; margin-bottom: 10px; }
+        .stats-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; }
+        .stats { font-size: 14px; color: #666; }
+        .download-btn { background: var(--accent-clr); color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 13px; text-decoration: none; display: inline-block; transition: 0.3s; }
+        .download-btn:hover { opacity: 0.8; }
         .card { background: white; padding: 15px; margin-bottom: 12px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .mag-tag { display: inline-block; background: #e67e22; color: white; font-size: 11px; padding: 2px 6px; border-radius: 4px; margin-bottom: 5px; }
         .title { font-weight: bold; font-size: 17px; line-height: 1.4; display: block; margin-bottom: 5px; }
         .author { color: #34495e; font-size: 15px; margin-bottom: 8px; }
         .meta { font-size: 13px; color: #7f8c8d; border-top: 1px solid #eee; padding-top: 8px; }
         .note { font-style: italic; color: #95a5a6; font-size: 12px; margin-top: 5px; }
-        .highlight { background: #ffeb3b; }
     </style>
 </head>
 <body>
 
 <header>
-    <h1 style="margin:0; font-size: 1.4rem;">伊那路目次アーカイブ</h1>
-    <p style="margin:5px 0 0; font-size: 0.8rem; opacity: 0.8;">信州郷土誌アーカイブ・フェーズ1</p>
+    <h1 style="margin:0; font-size: 1.6rem;">『伊那路』目次アーカイブ</h1>
+    <p style="margin:8px 0 0; font-size: 0.9rem; opacity: 0.9;">収録範囲：2008年（通巻612号）〜2025年</p>
 </header>
 
 <div class="container">
     <input type="text" id="search-box" placeholder="記事名、著者、特集名で検索...">
-    <div id="count" class="stats">読み込み中...</div>
+    
+    <div class="stats-row">
+        <div id="count" class="stats">読み込み中...</div>
+        <a href="data.csv" download="inaji_index.csv" class="download-btn">データをCSVで保存</a>
+    </div>
+
     <div id="results"></div>
 </div>
 
@@ -41,20 +48,22 @@ let database = [];
 Papa.parse("data.csv", {
     download: true,
     header: true,
+    skipEmptyLines: true,
     complete: function(results) {
         database = results.data.filter(row => row.title);
         displayResults(database);
-        document.getElementById('count').innerText = `${database.length} 件のデータが見つかりました`;
+        document.getElementById('count').innerText = `${database.length} 件の記事を公開中`;
     }
 });
 
-// 検索実行
+// 検索実行（スペース無視・小文字対応）
 document.getElementById('search-box').addEventListener('input', function(e) {
-    const query = e.target.value.toLowerCase();
+    const query = e.target.value.toLowerCase().replace(/\s+/g, "");
     const filtered = database.filter(row => {
-        return row.title.toLowerCase().includes(query) || 
-               row.author.toLowerCase().includes(query) || 
-               row.note.toLowerCase().includes(query);
+        const t = (row.title || "").toLowerCase().replace(/\s+/g, "");
+        const a = (row.author || "").toLowerCase().replace(/\s+/g, "");
+        const n = (row.note || "").toLowerCase().replace(/\s+/g, "");
+        return t.includes(query) || a.includes(query) || n.includes(query);
     });
     displayResults(filtered);
     document.getElementById('count').innerText = `${filtered.length} 件ヒットしました`;
