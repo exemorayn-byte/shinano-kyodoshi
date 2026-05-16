@@ -45,7 +45,18 @@
 
 <script>
 let database = [];
-let currentResults = []; // 現在画面に表示されているデータを保持
+let currentResults = [];
+
+// 【追加】安全な文字に変換するエスケープ関数
+function escapeHtml(str) {
+    if (str === undefined || str === null) return '';
+    return String(str)
+              .replace(/&/g, '&amp;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;')
+              .replace(/"/g, '&quot;')
+              .replace(/'/g, '&#39;');
+}
 
 // CSV読み込み
 Papa.parse("data.csv", {
@@ -54,13 +65,13 @@ Papa.parse("data.csv", {
     skipEmptyLines: true,
     complete: function(results) {
         database = results.data.filter(row => row.title);
-        currentResults = database; // 初期状態は全データ
+        currentResults = database;
         displayResults(database);
         document.getElementById('count').innerText = `${database.length} 件の目次を表示中`;
     }
 });
 
-// 検索実行（スペース無視・小文字対応）
+// 検索実行
 document.getElementById('search-box').addEventListener('input', function(e) {
     const query = e.target.value.toLowerCase().replace(/\s+/g, "");
     currentResults = database.filter(row => {
@@ -73,6 +84,7 @@ document.getElementById('search-box').addEventListener('input', function(e) {
     document.getElementById('count').innerText = `${currentResults.length} 件ヒットしました`;
 });
 
+// 検索結果の表示（安全版）
 function displayResults(data) {
     const container = document.getElementById('results');
     container.innerHTML = '';
@@ -80,34 +92,33 @@ function displayResults(data) {
     data.forEach(row => {
         const card = document.createElement('div');
         card.className = 'card';
+        
+        // 分割処理の安全対策
+        const year = row.date && row.date.includes('/') ? row.date.split('/')[0] : '----';
+
+        // すべての変数を escapeHtml() で囲んで無害化
         card.innerHTML = `
-            <span class="mag-tag">${row.magazine}</span>
-            <span class="title">${row.title}</span>
-            <div class="author">${row.author || '不明'}</div>
+            <span class="mag-tag">${escapeHtml(row.magazine)}</span>
+            <span class="title">${escapeHtml(row.title)}</span>
+            <div class="author">${escapeHtml(row.author || '不明')}</div>
             <div class="meta">
-                ${row.date.split('/')[0]}年 / ${row.volume}巻 ${row.issue}号 (通巻${row.serial_num}号) / ${row.page}ページ
+                ${escapeHtml(year)}年 / ${escapeHtml(row.volume)}巻 ${escapeHtml(row.issue)}号 (通巻${escapeHtml(row.serial_num)}号) / ${escapeHtml(row.page)}ページ
             </div>
-            ${row.note ? `<div class="note">備考: ${row.note}</div>` : ''}
+            ${row.note ? `<div class="note">備考: ${escapeHtml(row.note)}</div>` : ''}
         `;
         container.appendChild(card);
     });
 }
 
-// 検索結果だけをCSVとして書き出す関数
+// CSV保存機能
 function downloadFilteredCSV() {
     if (currentResults.length === 0) {
         alert("保存するデータがありません。");
         return;
     }
-
-    // JSON形式からCSV文字列に変換
     const csv = Papa.unparse(currentResults);
-
-    // 文字化け対策（BOM付きUTF-8）
     const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
     const blob = new Blob([bom, csv], { type: 'text/csv;charset=utf-8;' });
-    
-    // ダウンロード用リンクを一時的に作成
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
